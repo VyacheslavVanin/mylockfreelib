@@ -42,8 +42,7 @@ class blockAllocator
                 newval.top     = nodes.get()[ oldval.top ].next;
             }while(!stack.compare_exchange_strong(oldval.whole, newval.whole));
 
-            void* ptr = &data.get()[oldval.top];
-            return ptr;
+            return &data.get()[oldval.top*sizeOfElement];
         }
 
         void* get() {
@@ -116,6 +115,7 @@ class ObjectPool
 
         void free(T* p)
         {
+            p->~T();
             ba.free(p);
         }
 
