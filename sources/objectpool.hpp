@@ -6,15 +6,14 @@
 
 
 /* lockfree allocator structure */
-template<typename T>
 class blockAllocator
 {
     public:
-        blockAllocator(size_t numBlocks)
-          : data( (T*)calloc(numBlocks, sizeof(T)), deleter),
+        blockAllocator(size_t numBlocks, size_t sizeOfBlock)
+          : data( (char*)calloc(numBlocks, sizeOfBlock), deleter),
             nodes( (stacknode*)calloc(numBlocks, sizeof(stacknode)),
                     nodedeleter),
-            sizeOfElement(sizeof(T)),
+            sizeOfElement(sizeOfBlock),
             numberOfElements(numBlocks),
             stack()
         {
@@ -30,8 +29,7 @@ class blockAllocator
             stack = stackval.whole;
         }
 
-        template<typename... Args>
-        T* get_nothrow(Args&&... args) {
+        void* get_nothrow() {
             lfstack_    oldval;
             lfstack_    newval;
 
@@ -44,20 +42,18 @@ class blockAllocator
                 newval.top     = nodes.get()[ oldval.top ].next;
             }while(!stack.compare_exchange_strong(oldval.whole, newval.whole));
 
-            T* ptr = &data.get()[oldval.top];
-            new(ptr)T(args...);
+            void* ptr = &data.get()[oldval.top];
             return ptr;
         }
 
-        template<typename... Args>
-        T* get(Args&&... args) {
-            auto p = get_nothrow(args...);
+        void* get() {
+            auto p = get_nothrow();
             if(p==nullptr)
                 throw std::bad_alloc();
             return p;
         }
 
-        void free(T* p) {
+        void free(void* p) {
             const char* const datastart = (const char*)data.get();
             const char* const endofdata = datastart + numberOfElements * (sizeOfElement);
 
@@ -65,7 +61,6 @@ class blockAllocator
             if( (p >= (void*)endofdata) || (p < (void*)datastart) )
                 throw std::logic_error("invalid free. Pointer is not from this allocator.");
 
-            p->~T();
             const size_t index = ( (const char*)p - datastart )/sizeOfElement;
 
             lfstack_    oldval;
@@ -95,13 +90,36 @@ class blockAllocator
         }lfstack_;
         enum{STACK_EMPTY=std::numeric_limits<uint32_t>::max()};
 
-        static void deleter(T* p) {::free(p);}
+        static void deleter(char* p) {::free(p);}
         static void nodedeleter(stacknode* p) {::free(p);}
-        std::unique_ptr<T, void(&)(T*)> data; /* array for storing numBlock elements 
+        std::unique_ptr<char, void(&)(char*)> data; /* array for storing numBlock elements 
                                      * each of size sizeOfBlock */ 
         std::unique_ptr<stacknode, void(&)(stacknode*)> nodes; /* stack elements array */
         size_t sizeOfElement; /* size of each block */
         size_t numberOfElements; /* number of blocks */
         std::atomic_uint_least64_t  stack; 
+};
+
+template<typename T>
+class ObjectPool
+{
+    public:
+        ObjectPool(size_t numObjects):ba(numObjects, sizeof(T)){} 
+
+        template<typename... Args>
+        T* get(Args&&... args)
+        {
+            void* p = ba.get();
+            new(p)T(args...);
+            return reinterpret_cast<T*>(p);
+        }
+
+        void free(T* p)
+        {
+            ba.free(p);
+        }
+
+    private:
+        blockAllocator ba;
 };
 
