@@ -6,10 +6,10 @@
 
 
 /* lockfree allocator structure */
-class blockAllocator
+class BlockAllocator
 {
     public:
-        blockAllocator(size_t numBlocks, size_t sizeOfBlock)
+        BlockAllocator(size_t numBlocks, size_t sizeOfBlock)
           : data( (char*)calloc(numBlocks, sizeOfBlock), deleter),
             nodes( (stacknode*)calloc(numBlocks, sizeof(stacknode)),
                     nodedeleter),
@@ -17,7 +17,7 @@ class blockAllocator
             numberOfElements(numBlocks),
             stack()
         {
-            lfstack_ stackval;
+            lfstack stackval;
             stackval.counter = 0;
             stackval.top = STACK_EMPTY;
 
@@ -30,8 +30,8 @@ class blockAllocator
         }
 
         void* get_nothrow() {
-            lfstack_    oldval;
-            lfstack_    newval;
+            lfstack    oldval;
+            lfstack    newval;
 
             do {
                 oldval.whole = stack.load();
@@ -62,8 +62,8 @@ class blockAllocator
 
             const size_t index = ( (const char*)p - datastart )/sizeOfElement;
 
-            lfstack_    oldval;
-            lfstack_    newval;
+            lfstack    oldval;
+            lfstack    newval;
             stacknode* node = &nodes.get()[ index ];
             do {
                 oldval.whole = stack.load();
@@ -86,13 +86,13 @@ class blockAllocator
                 };
                 uint64_t  whole;
             };
-        }lfstack_;
+        }lfstack;
         enum{STACK_EMPTY=std::numeric_limits<uint32_t>::max()};
 
         static void deleter(char* p) {::free(p);}
         static void nodedeleter(stacknode* p) {::free(p);}
         std::unique_ptr<char, void(&)(char*)> data; /* array for storing numBlock elements 
-                                     * each of size sizeOfBlock */ 
+                                                     * each of size sizeOfBlock */ 
         std::unique_ptr<stacknode, void(&)(stacknode*)> nodes; /* stack elements array */
         size_t sizeOfElement; /* size of each block */
         size_t numberOfElements; /* number of blocks */
@@ -106,20 +106,18 @@ class ObjectPool
         ObjectPool(size_t numObjects):ba(numObjects, sizeof(T)){} 
 
         template<typename... Args>
-        T* get(Args&&... args)
-        {
+        T* get(Args&&... args) {
             void* p = ba.get();
             new(p)T(args...);
             return reinterpret_cast<T*>(p);
         }
 
-        void free(T* p)
-        {
+        void free(T* p) {
             p->~T();
             ba.free(p);
         }
 
     private:
-        blockAllocator ba;
+        BlockAllocator ba;
 };
 
