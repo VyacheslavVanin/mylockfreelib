@@ -49,8 +49,8 @@ void thread_func()
 int main()
 {
     std::thread t1 = std::thread(thread_func);
-//    std::thread t2 = std::thread(thread_func);
+    std::thread t2 = std::thread(thread_func);
         t1.join();
-  //      t2.join();
+        t2.join();
     std::cout << std::endl;
 }
