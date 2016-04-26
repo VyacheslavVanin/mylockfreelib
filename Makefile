@@ -1,8 +1,8 @@
 TARGET=run
 SOURCEDIR=./sources
-CXXSRCS=$(shell find $(SOURCEDIR) -name *.cpp) main.cpp
+CXXSRCS:=$(shell find $(SOURCEDIR) -name "*.cpp") main.cpp
 
-CXXFLAGS=-std=c++11 -O0 -g -Wall -Wextra -Weffc++
+CXXFLAGS=-std=c++11 -O2 -Wall -Wextra -Weffc++
 LFLAGS=-lpthread
 
 
