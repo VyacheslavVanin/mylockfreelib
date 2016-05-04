@@ -2,7 +2,7 @@ TARGET=run
 SOURCEDIR=./sources
 CXXSRCS:=$(shell find $(SOURCEDIR) -name "*.cpp") main.cpp
 
-CXXFLAGS=-std=c++11 -O2 -Wall -Wextra -Weffc++
+CXXFLAGS=-std=c++11 -O2 -Wall -Wextra -Weffc++ -g
 LFLAGS=-lpthread
 
 
